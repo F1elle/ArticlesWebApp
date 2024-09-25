@@ -9,4 +9,5 @@ public class UsersEntity(string userName, string passwordHash)
     public List<ArticlesEntity> Articles { get; set; } = [];
     public List<LikesEntity> Likes { get; set; } = [];
     public List<CommentsEntity> Comments { get; set; } = [];
+    public RolesEntity Role { get; set; } 
 }

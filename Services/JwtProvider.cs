@@ -1,15 +1,15 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using ArticlesWebApp.Api.Abstractions;
 using ArticlesWebApp.Api.Common;
-using ArticlesWebApp.Api.Endpoints;
 using ArticlesWebApp.Api.Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ArticlesWebApp.Api.Services;
 
-public class JwtProvider(IOptions<JwtOptions> options)
+public class JwtProvider(IOptions<JwtOptions> options) : IJwtProvider
 {
     private readonly JwtOptions _options = options.Value;
     

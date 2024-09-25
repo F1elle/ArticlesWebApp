@@ -1,8 +1,8 @@
-using ArticlesWebApp.Api.Common;
+using ArticlesWebApp.Api.Abstractions;
 
 namespace ArticlesWebApp.Api.Services;
 
-public class PasswordHasher
+public class PasswordHasher : IPasswordHasher
 {
     public string HashPassword(string password) => 
         BCrypt.Net.BCrypt.EnhancedHashPassword(password);

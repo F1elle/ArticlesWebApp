@@ -1,8 +1,7 @@
-using System.Security.Principal;
+using ArticlesWebApp.Api.Abstractions;
 using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.Entities;
-using ArticlesWebApp.Api.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,8 +26,8 @@ public static class AuthEndpoints
 
     private static async Task<Results<Ok, BadRequest<string>>> LoginEndpointHandler(Request request, 
         ArticlesDbContext dbContext,
-        PasswordHasher hasher,
-        JwtProvider jwtProvider,
+        IPasswordHasher hasher,
+        IJwtProvider jwtProvider,
         HttpContext httpContext)
     {
         try
@@ -51,7 +50,7 @@ public static class AuthEndpoints
     
     private static async Task<Results<Ok, BadRequest<string>>> SignupEndpointHandler(Request request,
         ArticlesDbContext dbContext,
-        PasswordHasher hasher)
+        IPasswordHasher hasher)
     {
         try
         {
@@ -59,13 +58,25 @@ public static class AuthEndpoints
         }
         catch (InvalidOperationException)
         {
-            await dbContext.Users.AddAsync(new UsersEntity(
+            var user = new UsersEntity(
                 request.username,
-                hasher.HashPassword(request.password)));
-        
-            await dbContext.SaveChangesAsync();
-
-            return TypedResults.Ok();
+                hasher.HashPassword(request.password));
+            try
+            {
+                await dbContext.Users.AddAsync(user);
+                
+                var role = await dbContext.Roles.FindAsync(5);
+                
+                role.Users.Add(user);
+                
+                await dbContext.SaveChangesAsync();
+            
+                return TypedResults.Ok();
+            }
+            catch (InvalidOperationException)
+            {
+                return TypedResults.BadRequest("There's an error occured during assigning roles.");
+            }
         }
         
         return TypedResults.BadRequest("This username is already taken.");

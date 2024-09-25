@@ -6,8 +6,6 @@ Just another learning project
 
 ### Roadmap:
 
-- [ ] Proper authentication and authorization
-
 - [ ] Proper data validation
 
 - [ ] Something like good project structure
@@ -19,3 +17,5 @@ Just another learning project
 - [x] Endpoints
 
 - [x] Basic logic
+
+- [x] Proper authentication and authorization

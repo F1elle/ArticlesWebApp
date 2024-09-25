@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using System.Text;
+using ArticlesWebApp.Api.Abstractions;
 using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ArticlesWebApp.Api;
@@ -15,8 +17,8 @@ public static class ConfigureServices
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddDbContext<ArticlesDbContext>();
-        builder.Services.AddScoped<JwtProvider>();
-        builder.Services.AddScoped<PasswordHasher>();
+        builder.Services.AddScoped<IJwtProvider, JwtProvider>();
+        builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(nameof(JwtOptions)));
         builder.ConfigureAuth();
     }
@@ -48,5 +50,7 @@ public static class ConfigureServices
             });
 
         builder.Services.AddAuthorization();
+
+        builder.Services.AddSingleton<IAuthorizationHandler, ArticlesAuthorizationHandler>();
     }
 }

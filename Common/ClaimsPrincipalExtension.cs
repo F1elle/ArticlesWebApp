@@ -9,7 +9,7 @@ public static class ClaimsPrincipalExtension
         var claim = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (claim == null)
         {
-            throw new Exception("Invalid UserId");
+            throw new InvalidOperationException("Invalid UserId"); //Exception("Invalid UserId");
         }
         return Guid.Parse(claim);
     }

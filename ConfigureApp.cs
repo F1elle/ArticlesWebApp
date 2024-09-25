@@ -9,11 +9,15 @@ public static class ConfigureApp
     public static async Task Configure(this WebApplication app)
     {
         app.UseHttpsRedirection();
-        app.UseSwagger();
-        app.UseSwaggerUI();
+        
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
 
         app.MapEndpoints();
-        
+
         app.UseAuthentication();
         app.UseAuthorization();
 
@@ -26,6 +30,7 @@ public static class ConfigureApp
         app.MapUsersEndpoints();
         app.MapAuthEndpoints();
         app.MapCommentsEndpoints();
+        app.MapAdminEndpoints();
     }
 
     public static async Task MigrateDb(this WebApplication app)

@@ -22,6 +22,7 @@ public class ArticlesDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new ArticlesConfiguration());
+        modelBuilder.ApplyConfiguration(new RolesConfiguration());
         modelBuilder.ApplyConfiguration(new UsersConfiguration());
         modelBuilder.ApplyConfiguration(new LikesConfiguration());
         modelBuilder.ApplyConfiguration(new CommentsConfiguration());
@@ -31,4 +32,13 @@ public class ArticlesDbContext : DbContext
     public DbSet<ArticlesEntity> Articles { get; set; }
     public DbSet<LikesEntity> Likes { get; set; }
     public DbSet<CommentsEntity> Comments { get; set; }
+    public DbSet<RolesEntity> Roles { get; set; }
 }
+
+
+
+
+
+
+
+

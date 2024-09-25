@@ -13,7 +13,7 @@ public class ArticlesConfiguration : IEntityTypeConfiguration<ArticlesEntity>
         builder.Property(a => a.Title).IsRequired().HasMaxLength(120);
         builder.Property(a => a.Content).IsRequired().HasMaxLength(10000);
         builder.Property(a => a.PublishDate).IsRequired();
-        builder.Property(a => a.AuthorId).IsRequired();
+        builder.Property(a => a.OwnerId).IsRequired();
         builder.HasMany(a => a.Comments).WithOne().HasForeignKey(c => c.ArticleId);
         builder.HasMany(a => a.Likes).WithOne().HasForeignKey(l => l.ArticleId);
     }

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ArticlesWebApp.Api.Migrations
 {
     [DbContext(typeof(ArticlesDbContext))]
-    [Migration("20240916205529_NewEntitiesAdded")]
-    partial class NewEntitiesAdded
+    [Migration("20240923224200_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -26,15 +26,15 @@ namespace ArticlesWebApp.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("AuthorId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(10000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateOnly?>("ModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OwnerId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateOnly>("PublishDate")
@@ -47,7 +47,7 @@ namespace ArticlesWebApp.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AuthorId");
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Articles", (string)null);
                 });
@@ -66,17 +66,17 @@ namespace ArticlesWebApp.Api.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("TEXT");
 
-                    b.Property<DateOnly>("PublishedDate")
+                    b.Property<Guid>("OwnerId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<DateOnly>("PublishedDate")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("OwnerId");
 
-                    b.HasIndex("ArticleId", "UserId")
+                    b.HasIndex("ArticleId", "OwnerId")
                         .IsUnique();
 
                     b.ToTable("Comments", (string)null);
@@ -87,14 +87,56 @@ namespace ArticlesWebApp.Api.Migrations
                     b.Property<Guid>("ArticleId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("OwnerId")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("ArticleId", "UserId");
+                    b.HasKey("ArticleId", "OwnerId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Likes", (string)null);
+                });
+
+            modelBuilder.Entity("ArticlesWebApp.Api.Entities.RolesEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Permissions")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Roles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 5,
+                            Name = "User",
+                            Permissions = "[1,2,3,4]"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "Admin",
+                            Permissions = "[1,2,3,4,5,6]"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Name = "SuperAdmin",
+                            Permissions = "[1,2,3,4,5,6,7]"
+                        });
                 });
 
             modelBuilder.Entity("ArticlesWebApp.Api.Entities.UsersEntity", b =>
@@ -110,11 +152,16 @@ namespace ArticlesWebApp.Api.Migrations
                     b.Property<DateOnly>("RegisterDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("RoleId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("UserName")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
 
                     b.HasIndex("UserName")
                         .IsUnique();
@@ -126,7 +173,7 @@ namespace ArticlesWebApp.Api.Migrations
                 {
                     b.HasOne("ArticlesWebApp.Api.Entities.UsersEntity", null)
                         .WithMany("Articles")
-                        .HasForeignKey("AuthorId")
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -141,7 +188,7 @@ namespace ArticlesWebApp.Api.Migrations
 
                     b.HasOne("ArticlesWebApp.Api.Entities.UsersEntity", null)
                         .WithMany("Comments")
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -156,9 +203,20 @@ namespace ArticlesWebApp.Api.Migrations
 
                     b.HasOne("ArticlesWebApp.Api.Entities.UsersEntity", null)
                         .WithMany("Likes")
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ArticlesWebApp.Api.Entities.UsersEntity", b =>
+                {
+                    b.HasOne("ArticlesWebApp.Api.Entities.RolesEntity", "Role")
+                        .WithMany("Users")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("ArticlesWebApp.Api.Entities.ArticlesEntity", b =>
@@ -166,6 +224,11 @@ namespace ArticlesWebApp.Api.Migrations
                     b.Navigation("Comments");
 
                     b.Navigation("Likes");
+                });
+
+            modelBuilder.Entity("ArticlesWebApp.Api.Entities.RolesEntity", b =>
+                {
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("ArticlesWebApp.Api.Entities.UsersEntity", b =>

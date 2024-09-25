@@ -2,6 +2,8 @@ using System.Security.Claims;
 using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.Entities;
+using ArticlesWebApp.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +14,7 @@ public static class CommentsEndpoints
 {
     public static RouteGroupBuilder MapCommentsEndpoints(this WebApplication app)
     {
-        var comments = app.MapGroup("/comments").RequireAuthorization();
+        var comments = app.MapGroup("/comments");
 
         comments.MapGet("/{id}", GetCommentsByIdHandler)
             .WithSummary("Get comments by id");
@@ -36,11 +38,18 @@ public static class CommentsEndpoints
             : TypedResults.Ok(comment);
     }
     
-    private static async Task<Ok<Guid>> PostCommentsHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok<Guid>, ForbidHttpResult>> PostCommentsHandler(ArticlesDbContext dbContext,
             string commentContent,
             ClaimsPrincipal user,
-            Guid articleId)
+            Guid articleId,
+            IAuthorizationService authorizationService)
     {
+        var authResult = await authorizationService.AuthorizeAsync(user, null, new RoleRequirement(Roles.User));
+        if (!authResult.Succeeded)
+        {
+            return TypedResults.Forbid();
+        }
+        
         var comment = new CommentsEntity(user.GetUserId(), articleId, commentContent);
         await dbContext.Comments.AddAsync(comment);
         await dbContext.SaveChangesAsync();
@@ -53,15 +62,18 @@ public static class CommentsEndpoints
             ArticlesDbContext dbContext,
             ClaimsPrincipal user,
             Guid commentId,
-            string updatedCommentContent)
+            string updatedCommentContent,
+            IAuthorizationService authorizationService)
     {
         var comment = await dbContext.Comments.FindAsync(commentId);
         if (comment == null)
         {
             return TypedResults.NotFound();
         }
+        
+        var authResult = await authorizationService.AuthorizeAsync(user, comment, new RoleRequirement(Roles.User));
 
-        if (comment.UserId != user.GetUserId())
+        if (!authResult.Succeeded)
         {
             return TypedResults.Forbid();
         }
@@ -71,11 +83,21 @@ public static class CommentsEndpoints
         return TypedResults.Ok(comment.Id);
     }
 
-    private static async Task<NoContent> DeleteCommentsHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<NoContent, ForbidHttpResult>> DeleteCommentsHandler(ArticlesDbContext dbContext,
             ClaimsPrincipal user,
-            Guid commentId)
+            Guid commentId,
+            IAuthorizationService authorizationService)
     {
-        await dbContext.Comments.Where(c => c.Id == commentId && c.UserId == user.GetUserId())
+        var comment = await dbContext.Comments.FindAsync(commentId);
+        
+        var authResult = await authorizationService.AuthorizeAsync(user, comment, new RoleRequirement(Roles.User));
+
+        if (!authResult.Succeeded)
+        {
+            return TypedResults.Forbid();
+        }
+        
+        await dbContext.Comments.Where(c => c.Id == commentId)
             .ExecuteDeleteAsync();
         
         return TypedResults.NoContent();

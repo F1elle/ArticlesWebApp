@@ -2,6 +2,8 @@ using System.Security.Claims;
 using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.Entities;
+using ArticlesWebApp.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +13,7 @@ public static class ArticlesEndpoints
 {
     public static RouteGroupBuilder MapArticlesEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("articles").RequireAuthorization();
+        var group = app.MapGroup("articles");
 
         group.MapGet("/{articleId}", GetArticlesByIdHandler)
              .WithSummary("Get articles by id").WithName("ArticlesGetById");
@@ -21,23 +23,31 @@ public static class ArticlesEndpoints
              .WithSummary("Edit articles");
         group.MapDelete("/{articleId}", DeleteArticlesHandler)
              .WithSummary("Delete articles by id");
-        group.MapPost("/{articleId}/likes", LikesHandler)
+        group.MapPut("/{articleId}/likes", LikesHandler)
             .WithSummary("Like articles");
 
         return group;
     }
     
-    private static async Task<Ok<Guid>> PostArticlesHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok<Guid>, ForbidHttpResult>> PostArticlesHandler(ArticlesDbContext dbContext,
             string articleTitle, 
             string articleContent,
-            ClaimsPrincipal author)
+            ClaimsPrincipal author,
+            IAuthorizationService authorizationService)
     {
+        var authResult = await authorizationService
+            .AuthorizeAsync(author, null, new RoleRequirement(Roles.User));
+
+        if (!authResult.Succeeded)
+        {
+            return TypedResults.Forbid();
+        }
         var article = new ArticlesEntity
         {
             Title = articleTitle,
             Content = articleContent,
             PublishDate = DateOnly.FromDateTime(DateTime.Today),
-            AuthorId = author.GetUserId()
+            OwnerId = author.GetUserId()
         };
         
         await dbContext.Articles.AddAsync(article);
@@ -49,15 +59,18 @@ public static class ArticlesEndpoints
             Guid articleId, 
             string updatedTitle, 
             string updatedContent,
-            ClaimsPrincipal user)
+            ClaimsPrincipal user,
+            IAuthorizationService authorizationService)
     {
         var article = await dbContext.Articles.FindAsync(articleId);
         if (article == null)
         {
             return TypedResults.NotFound();
         }
+        
+        var authResult = await authorizationService.AuthorizeAsync(user, article, new RoleRequirement(Roles.User));
 
-        if (article.AuthorId != user.GetUserId())
+        if (!authResult.Succeeded)
         {
             return TypedResults.Forbid();
         }
@@ -69,43 +82,62 @@ public static class ArticlesEndpoints
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<Ok<ArticlesEntity>, NotFound>> GetArticlesByIdHandler(ArticlesDbContext dbContext,
-            Guid articleId)
-    {
-        var article = await dbContext.Articles
-            .AsNoTracking()
-            .Where(e => e.Id == articleId)
-            .Include(a => a.Comments)
-            .FirstOrDefaultAsync();
-        
-        return article is null 
-            ? TypedResults.NotFound()
-            : TypedResults.Ok(article);
-    }
-
-    private static async Task<NoContent> DeleteArticlesHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok<ArticlesEntity>, NotFound, ForbidHttpResult>> GetArticlesByIdHandler(ArticlesDbContext dbContext,
             Guid articleId,
             ClaimsPrincipal user)
     {
+        var article = await dbContext.Articles
+        .AsNoTracking()
+        .Where(e => e.Id == articleId)
+        .Include(a => a.Comments)
+        .FirstOrDefaultAsync();
+
+        if (article == null)
+        {
+            return TypedResults.NotFound();
+        }
+        return TypedResults.Ok(article);
+        
+    }
+
+    private static async Task<Results<NoContent, ForbidHttpResult>> DeleteArticlesHandler(ArticlesDbContext dbContext,
+            Guid articleId,
+            ClaimsPrincipal user,
+            IAuthorizationService authorizationService)
+    {
+        var article = await dbContext.Articles.FindAsync(articleId);
+        
+        var authResult = await authorizationService.AuthorizeAsync(user, article, new RoleRequirement(Roles.User));
+
+        if (!authResult.Succeeded)
+        {
+            return TypedResults.Forbid();
+        }
         await dbContext.Articles
-            .Where(a => a.Id == articleId && a.AuthorId == user.GetUserId())
+            .Where(a => a.Id == articleId)
             .ExecuteDeleteAsync();
         
         return TypedResults.NoContent();
     }
 
-    private static async Task<Ok> LikesHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok, ForbidHttpResult>> LikesHandler(ArticlesDbContext dbContext,
             Guid articleId,
-            ClaimsPrincipal user)
+            ClaimsPrincipal user,
+            IAuthorizationService authorizationService)
     {
+        var authResult = await authorizationService.AuthorizeAsync(user, null, new RoleRequirement(Roles.User));
+        if (!authResult.Succeeded)
+        {
+            return TypedResults.Forbid();
+        }
         try
         {
             await dbContext.Likes
                 .AsNoTracking()
-                .FirstAsync(e => e.ArticleId == articleId && e.UserId == user.GetUserId());
+                .FirstAsync(e => e.ArticleId == articleId && e.OwnerId == user.GetUserId());
             
             await dbContext.Likes
-                .Where(l => l.ArticleId == articleId && l.UserId == user.GetUserId())
+                .Where(l => l.ArticleId == articleId && l.OwnerId == user.GetUserId())
                 .ExecuteDeleteAsync();
             
             return TypedResults.Ok();
