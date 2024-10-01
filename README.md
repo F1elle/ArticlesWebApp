@@ -6,9 +6,11 @@ Just another learning project
 
 ### Roadmap:
 
-- [ ] Proper data validation
-
 - [ ] Something like good project structure
+
+- [ ] Fix major bugs (I haven't found them yet but I'm sure there are lots of them)
+
+- [ ] 
 
 - [ ] idk
 
@@ -19,3 +21,5 @@ Just another learning project
 - [x] Basic logic
 
 - [x] Proper authentication and authorization
+
+- [x] Proper data validation

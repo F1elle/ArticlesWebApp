@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ArticlesWebApp.Api.Services;
 
-public class RolesAuthorizationHandler(IServiceScopeFactory serviceScopeFactory)
-    : AuthorizationHandler<RoleRequirement>
+public class RoleAuthorizationHandler(IServiceScopeFactory scopeFactory) : AuthorizationHandler<RoleRequirement>
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         RoleRequirement requirement)
@@ -14,7 +13,7 @@ public class RolesAuthorizationHandler(IServiceScopeFactory serviceScopeFactory)
         try
         {
             var userId = context.User.GetUserId();
-            using var scope = serviceScopeFactory.CreateScope();
+            using var scope = scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ArticlesDbContext>();
             
             var userRole = await dbContext.Users
@@ -31,12 +30,12 @@ public class RolesAuthorizationHandler(IServiceScopeFactory serviceScopeFactory)
             {
                 context.Fail();
             }
-            
         }
         catch (InvalidOperationException e)
         {
             await Console.Error.WriteLineAsync(e.Message);
             context.Fail();
-        }    
+        }
     }
+
 }

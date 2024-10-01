@@ -30,7 +30,8 @@ public class ArticlesDbContext : DbContext
     
     public DbSet<UsersEntity> Users { get; set; }
     public DbSet<ArticlesEntity> Articles { get; set; }
-    public DbSet<LikesEntity> Likes { get; set; }
+    public DbSet<LikesEntity> ArticlesLikes { get; set; }
+    public DbSet<LikesEntity> CommentsLikes { get; set; }
     public DbSet<CommentsEntity> Comments { get; set; }
     public DbSet<RolesEntity> Roles { get; set; }
 }

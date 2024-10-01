@@ -2,7 +2,7 @@ using ArticlesWebApp.Api.Abstractions;
 
 namespace ArticlesWebApp.Api.Services;
 
-public class PasswordHasher : IPasswordHasher
+public class PasswordsHasher : IPasswordsHasher
 {
     public string HashPassword(string password) => 
         BCrypt.Net.BCrypt.EnhancedHashPassword(password);

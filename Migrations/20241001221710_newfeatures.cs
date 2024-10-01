@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ArticlesWebApp.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class Init : Migration
+    public partial class newfeatures : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -54,7 +54,7 @@ namespace ArticlesWebApp.Api.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Title = table.Column<string>(type: "TEXT", maxLength: 120, nullable: false),
-                    Content = table.Column<string>(type: "TEXT", maxLength: 10000, nullable: false),
+                    Content = table.Column<string>(type: "TEXT", maxLength: 25000, nullable: false),
                     PublishDate = table.Column<DateOnly>(type: "TEXT", nullable: false),
                     ModifiedDate = table.Column<DateOnly>(type: "TEXT", nullable: true),
                     OwnerId = table.Column<Guid>(type: "TEXT", nullable: false)
@@ -77,7 +77,8 @@ namespace ArticlesWebApp.Api.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     OwnerId = table.Column<Guid>(type: "TEXT", nullable: false),
                     ArticleId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Content = table.Column<string>(type: "TEXT", maxLength: 250, nullable: false),
+                    CommentId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    Content = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     PublishedDate = table.Column<DateOnly>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -102,14 +103,14 @@ namespace ArticlesWebApp.Api.Migrations
                 columns: table => new
                 {
                     OwnerId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ArticleId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    PostId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Likes", x => new { x.ArticleId, x.OwnerId });
+                    table.PrimaryKey("PK_Likes", x => new { x.PostId, x.OwnerId });
                     table.ForeignKey(
-                        name: "FK_Likes_Articles_ArticleId",
-                        column: x => x.ArticleId,
+                        name: "FK_Likes_Articles_PostId",
+                        column: x => x.PostId,
                         principalTable: "Articles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);

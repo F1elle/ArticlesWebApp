@@ -2,6 +2,7 @@ using ArticlesWebApp.Api.Abstractions;
 using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.Entities;
+using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,7 +27,7 @@ public static class AuthEndpoints
 
     private static async Task<Results<Ok, BadRequest<string>>> LoginEndpointHandler(Request request, 
         ArticlesDbContext dbContext,
-        IPasswordHasher hasher,
+        IPasswordsHasher hasher,
         IJwtProvider jwtProvider,
         HttpContext httpContext)
     {
@@ -50,7 +51,8 @@ public static class AuthEndpoints
     
     private static async Task<Results<Ok, BadRequest<string>>> SignupEndpointHandler(Request request,
         ArticlesDbContext dbContext,
-        IPasswordHasher hasher)
+        IPasswordsHasher hasher,
+        IValidator<string> validator)
     {
         try
         {
@@ -58,6 +60,12 @@ public static class AuthEndpoints
         }
         catch (InvalidOperationException)
         {
+            var validationResult = await validator.ValidateAsync(request.password);
+            
+            if (!validationResult.IsValid) return TypedResults
+                .BadRequest($"{String.Join("; ", validationResult
+                    .Errors.Select(x => x.ErrorMessage))}");
+            
             var user = new UsersEntity(
                 request.username,
                 hasher.HashPassword(request.password));

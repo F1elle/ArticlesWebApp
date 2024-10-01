@@ -1,9 +1,11 @@
-using System.Security.Claims;
 using System.Text;
 using ArticlesWebApp.Api.Abstractions;
 using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
+using ArticlesWebApp.Api.DTOs;
 using ArticlesWebApp.Api.Services;
+using ArticlesWebApp.Api.Services.Validators;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -18,9 +20,12 @@ public static class ConfigureServices
         builder.Services.AddSwaggerGen();
         builder.Services.AddDbContext<ArticlesDbContext>();
         builder.Services.AddScoped<IJwtProvider, JwtProvider>();
-        builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+        builder.Services.AddScoped<IPasswordsHasher, PasswordsHasher>();
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(nameof(JwtOptions)));
         builder.ConfigureAuth();
+        builder.Services.AddScoped<IValidator<InputArticlesDto>, ArticlesValidator>();
+        builder.Services.AddScoped<IValidator<InputCommentsDto>, CommentsValidator>();
+        builder.Services.AddScoped<IValidator<string>, PasswordsValidator>();
     }
 
     private static void ConfigureAuth(this WebApplicationBuilder builder)
@@ -51,6 +56,7 @@ public static class ConfigureServices
 
         builder.Services.AddAuthorization();
 
-        builder.Services.AddSingleton<IAuthorizationHandler, ArticlesAuthorizationHandler>();
+        builder.Services.AddSingleton<IAuthorizationHandler, ResourceAuthorizationHandler>();
+        builder.Services.AddSingleton<IAuthorizationHandler, RoleAuthorizationHandler>();
     }
 }

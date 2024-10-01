@@ -3,7 +3,7 @@ using ArticlesWebApp.Api.Abstractions;
 
 namespace ArticlesWebApp.Api.Entities;
 
-public class ArticlesEntity : IOwnedEntity
+public class ArticlesEntity : IOwnedEntity, IPostedEntity
 {
     public Guid Id { get; set; }
     public required string Title { get; set; }  

@@ -25,7 +25,7 @@ namespace ArticlesWebApp.Api.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(10000)
+                        .HasMaxLength(25000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateOnly?>("ModifiedDate")
@@ -58,9 +58,12 @@ namespace ArticlesWebApp.Api.Migrations
                     b.Property<Guid>("ArticleId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("CommentId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(250)
+                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OwnerId")
@@ -81,13 +84,13 @@ namespace ArticlesWebApp.Api.Migrations
 
             modelBuilder.Entity("ArticlesWebApp.Api.Entities.LikesEntity", b =>
                 {
-                    b.Property<Guid>("ArticleId")
+                    b.Property<Guid>("PostId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("ArticleId", "OwnerId");
+                    b.HasKey("PostId", "OwnerId");
 
                     b.HasIndex("OwnerId");
 
@@ -192,15 +195,15 @@ namespace ArticlesWebApp.Api.Migrations
 
             modelBuilder.Entity("ArticlesWebApp.Api.Entities.LikesEntity", b =>
                 {
-                    b.HasOne("ArticlesWebApp.Api.Entities.ArticlesEntity", null)
-                        .WithMany("Likes")
-                        .HasForeignKey("ArticleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("ArticlesWebApp.Api.Entities.UsersEntity", null)
                         .WithMany("Likes")
                         .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ArticlesWebApp.Api.Entities.ArticlesEntity", null)
+                        .WithMany("Likes")
+                        .HasForeignKey("PostId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

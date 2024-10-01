@@ -11,7 +11,7 @@ public class CommentsConfiguration : IEntityTypeConfiguration<CommentsEntity>
         builder.ToTable("Comments");
         builder.HasKey(c => c.Id);
         builder.HasIndex(c => new {c.ArticleId, c.OwnerId}).IsUnique();
-        builder.Property(c => c.Content).IsRequired().HasMaxLength(250);
+        builder.Property(c => c.Content).IsRequired().HasMaxLength(500);
         builder.Property(c => c.PublishedDate).IsRequired();
     }
 }

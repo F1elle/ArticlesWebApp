@@ -15,27 +15,20 @@ public static class AdminEndpoints
     {
         var group = app.MapGroup("/admin");
 
-        group.MapPut("/promote/{id}", PromoteUsersHandler)
+        group.MapPut("/promote/{id}", PromoteUsersHandler).RequireAuthorization(policy =>
+                policy.AddRequirements(new RoleRequirement(Roles.SuperAdmin)))
             .WithSummary("Promote users");
-        group.MapPut("/demote/{id}", DemoteUsersHandler)
+        group.MapPut("/demote/{id}", DemoteUsersHandler).RequireAuthorization(policy =>
+                policy.AddRequirements(new RoleRequirement(Roles.SuperAdmin)))
             .WithSummary("Demote users");
 
         return group;
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, ForbidHttpResult>> PromoteUsersHandler(ArticlesDbContext dbContext, 
+    private static async Task<Results<Ok, BadRequest<string>>> PromoteUsersHandler(ArticlesDbContext dbContext, 
             Guid userId,
-            IAuthorizationService authorizationService,
             ClaimsPrincipal admin)
     {
-        var authResult = await authorizationService
-            .AuthorizeAsync(admin, null, new RoleRequirement(Roles.SuperAdmin));
-
-        if (!authResult.Succeeded)
-        {
-            return TypedResults.Forbid();
-        }
-        
         var user = await dbContext.Users.FindAsync(userId);
 
         if (user is null)
@@ -48,19 +41,10 @@ public static class AdminEndpoints
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, ForbidHttpResult>> DemoteUsersHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok, BadRequest<string>>> DemoteUsersHandler(ArticlesDbContext dbContext,
             Guid userId,
-            ClaimsPrincipal admin,
-            IAuthorizationService authorizationService)
+            ClaimsPrincipal admin)
     {
-        var authResult = await authorizationService
-            .AuthorizeAsync(admin, null, new RoleRequirement(Roles.SuperAdmin));
-
-        if (!authResult.Succeeded)
-        {
-            return TypedResults.Forbid();
-        }
-        
         var user = await dbContext.Users.FindAsync(userId);
         
         if (user is null)

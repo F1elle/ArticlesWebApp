@@ -6,17 +6,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ArticlesWebApp.Api.Services;
 
-public class ArticlesAuthorizationHandler(IServiceScopeFactory serviceFactory) 
-    : AuthorizationHandler<RoleRequirement, IOwnedEntity?>
+public class ResourceAuthorizationHandler(IServiceScopeFactory scopeFactory) 
+    : AuthorizationHandler<RoleRequirement, IOwnedEntity>
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
                 RoleRequirement requirement,
-                IOwnedEntity? resource)
+                IOwnedEntity resource)
     {
         try
         {
             var userId = context.User.GetUserId();
-            using var scope = serviceFactory.CreateScope();
+            using var scope = scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ArticlesDbContext>();
             
             var userRole = await dbContext.Users
@@ -29,20 +29,9 @@ public class ArticlesAuthorizationHandler(IServiceScopeFactory serviceFactory)
             {
                 context.Succeed(requirement);
             }
-            else if (userRole == (int)requirement.Role)
+            else if (userRole == (int)requirement.Role && resource.OwnerId == userId)
             {
-                if (resource == null)
-                {
-                    context.Succeed(requirement);
-                }
-                else if (resource.OwnerId == userId)
-                {
-                    context.Succeed(requirement);
-                }
-                else
-                {
-                    context.Fail();
-                }
+                context.Succeed(requirement);
             }
             else
             {
