@@ -10,8 +10,6 @@ Just another learning project
 
 - [ ] Fix major bugs (I haven't found them yet but I'm sure there are lots of them)
 
-- [ ] 
-
 - [ ] idk
 
 ### Already done (kinda):
