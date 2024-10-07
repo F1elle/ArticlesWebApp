@@ -13,6 +13,10 @@ public class RoleAuthorizationHandler(IServiceScopeFactory scopeFactory) : Autho
         try
         {
             var userId = context.User.GetUserId();
+            if (userId == null)
+            {
+                throw new InvalidOperationException("Invalid username");
+            }
             using var scope = scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ArticlesDbContext>();
             
@@ -33,7 +37,7 @@ public class RoleAuthorizationHandler(IServiceScopeFactory scopeFactory) : Autho
         }
         catch (InvalidOperationException e)
         {
-            await Console.Error.WriteLineAsync(e.Message);
+            //await Console.Error.WriteLineAsync(e.Message);
             context.Fail();
         }
     }

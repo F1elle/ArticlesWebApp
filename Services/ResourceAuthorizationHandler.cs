@@ -16,6 +16,10 @@ public class ResourceAuthorizationHandler(IServiceScopeFactory scopeFactory)
         try
         {
             var userId = context.User.GetUserId();
+            if (userId == null)
+            {
+                throw new InvalidOperationException("Invalid username");
+            }
             using var scope = scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ArticlesDbContext>();
             
@@ -40,7 +44,7 @@ public class ResourceAuthorizationHandler(IServiceScopeFactory scopeFactory)
         }
         catch (InvalidOperationException e)
         {
-            await Console.Error.WriteLineAsync(e.Message);
+            //await Console.Error.WriteLineAsync(e.Message);
             context.Fail();
         }
     }

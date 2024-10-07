@@ -33,7 +33,7 @@ public static class ArticlesEndpoints
         return group;
     }
     
-    private static async Task<Results<Ok<Guid>, BadRequest<string>>> PostArticlesHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok<Guid>, BadRequest<string>, ForbidHttpResult>> PostArticlesHandler(ArticlesDbContext dbContext,
             InputArticlesDto inputArticle,
             ClaimsPrincipal author,
             IValidator<InputArticlesDto> validator)
@@ -43,18 +43,22 @@ public static class ArticlesEndpoints
         if (!validationResult.IsValid) return TypedResults
             .BadRequest($"{String.Join("; ", validationResult
                 .Errors.Select(x => x.ErrorMessage))}");
+
+        var authorId = author.GetUserId();
+        if (authorId is not { } userId) return TypedResults.Forbid();
         
         var article = new ArticlesEntity
         {
             Title = inputArticle.Title,
             Content = inputArticle.Content,
             PublishDate = DateOnly.FromDateTime(DateTime.Today),
-            OwnerId = author.GetUserId()
+            OwnerId = userId
         };
         
         await dbContext.Articles.AddAsync(article);
         await dbContext.SaveChangesAsync();
         return TypedResults.Ok(article.Id);
+
     }
 
     private static async Task<Results<Ok, NotFound, ForbidHttpResult, BadRequest<string>>> UpdateArticlesHandler(ArticlesDbContext dbContext,
@@ -123,25 +127,27 @@ public static class ArticlesEndpoints
         return TypedResults.NoContent();
     }
 
-    private static async Task<Ok> LikesHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok, ForbidHttpResult>> LikesHandler(ArticlesDbContext dbContext,
             Guid articleId,
             ClaimsPrincipal user)
     {
+        var userId = user.GetUserId();
+        if (userId is not { } uid) return TypedResults.Forbid();
         try
         {
             await dbContext.ArticlesLikes
                 .AsNoTracking()
-                .FirstAsync(e => e.PostId == articleId && e.OwnerId == user.GetUserId());
+                .FirstAsync(e => e.PostId == articleId && e.OwnerId == uid);
             
             await dbContext.ArticlesLikes
-                .Where(l => l.PostId == articleId && l.OwnerId == user.GetUserId())
+                .Where(l => l.PostId == articleId && l.OwnerId == uid)
                 .ExecuteDeleteAsync();
             
             return TypedResults.Ok();
         }
         catch (InvalidOperationException)
         {
-            await dbContext.ArticlesLikes.AddAsync(new LikesEntity(user.GetUserId(), articleId));
+            await dbContext.ArticlesLikes.AddAsync(new LikesEntity(uid, articleId));
             await dbContext.SaveChangesAsync();
             return TypedResults.Ok();
         }

@@ -44,7 +44,7 @@ public static class CommentsEndpoints
             : TypedResults.Ok(comment);
     }
     
-    private static async Task<Results<Ok<Guid>, BadRequest<string>>> PostCommentsHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok<Guid>, BadRequest<string>, ForbidHttpResult>> PostCommentsHandler(ArticlesDbContext dbContext,
             InputCommentsDto inputComment,
             ClaimsPrincipal user,
             Guid articleId,
@@ -56,8 +56,11 @@ public static class CommentsEndpoints
         if (!validationResult.IsValid) return TypedResults
             .BadRequest($"{String.Join("; ", validationResult
                 .Errors.Select(x => x.ErrorMessage))}");
+
+        var userId = user.GetUserId();
+        if (userId is not { } uid) return TypedResults.Forbid();
         
-        var comment = new CommentsEntity(user.GetUserId(), articleId, inputComment.Content, commentId);
+        var comment = new CommentsEntity(uid, articleId, inputComment.Content, commentId);
         await dbContext.Comments.AddAsync(comment);
         await dbContext.SaveChangesAsync();
         return TypedResults.Ok(comment.Id);
@@ -113,21 +116,23 @@ public static class CommentsEndpoints
         ClaimsPrincipal user,
         Guid commentId)
     {
+        var userId = user.GetUserId();
+        if (userId is not { } uid) return TypedResults.Forbid();
         try
         {
             await dbContext.CommentsLikes
                 .AsNoTracking()
-                .FirstAsync(e => e.PostId == commentId && e.OwnerId == user.GetUserId());
+                .FirstAsync(e => e.PostId == commentId && e.OwnerId == uid);
             
             await dbContext.CommentsLikes
-                .Where(l => l.PostId == commentId && l.OwnerId == user.GetUserId())
+                .Where(l => l.PostId == commentId && l.OwnerId == uid)
                 .ExecuteDeleteAsync();
             
             return TypedResults.Ok();
         }
         catch (InvalidOperationException)
         {
-            await dbContext.CommentsLikes.AddAsync(new LikesEntity(user.GetUserId(), commentId));
+            await dbContext.CommentsLikes.AddAsync(new LikesEntity(uid, commentId));
             await dbContext.SaveChangesAsync();
             return TypedResults.Ok();
         }
