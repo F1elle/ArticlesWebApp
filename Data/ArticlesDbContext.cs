@@ -26,6 +26,8 @@ public class ArticlesDbContext : DbContext
         modelBuilder.ApplyConfiguration(new UsersConfiguration());
         modelBuilder.ApplyConfiguration(new LikesConfiguration());
         modelBuilder.ApplyConfiguration(new CommentsConfiguration());
+        modelBuilder.ApplyConfiguration(new AuthEventsConfiguration());
+        modelBuilder.ApplyConfiguration(new EventsConfiguration());
     }
     
     public DbSet<UsersEntity> Users { get; set; }
@@ -34,6 +36,8 @@ public class ArticlesDbContext : DbContext
     public DbSet<LikesEntity> CommentsLikes { get; set; }
     public DbSet<CommentsEntity> Comments { get; set; }
     public DbSet<RolesEntity> Roles { get; set; }
+    public DbSet<AuthEventsEntity> AuthEvents { get; set; }
+    public DbSet<EventsEntity> Events { get; set; }
 }
 
 
