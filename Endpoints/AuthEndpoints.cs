@@ -22,24 +22,24 @@ public static class AuthEndpoints
             .WithSummary("Log In");
         group.MapPut("/changeusername", ChangeLoginHandler)
             .WithSummary("Change username")
-            .RequireAuthorization(policy => 
+            .RequireAuthorization(policy =>
                 policy.AddRequirements(new RoleRequirement(Roles.User)));
         group.MapPut("/changepassword", ChangePasswordHandler)
             .WithSummary("Change password")
-            .RequireAuthorization(policy => 
+            .RequireAuthorization(policy =>
                 policy.AddRequirements(new RoleRequirement(Roles.User)));
         group.MapGet("/logout", LogOutHandler)
             .WithSummary("Log out")
-            .RequireAuthorization(policy => 
+            .RequireAuthorization(policy =>
                 policy.AddRequirements(new RoleRequirement(Roles.User)));
 
         return group;
     }
 
     public record Request(string username, string password);
-    
 
-    private static async Task<Results<Ok, BadRequest<string>>> LoginEndpointHandler(Request request, 
+
+    private static async Task<Results<Ok, BadRequest<string>>> LoginEndpointHandler(Request request,
         ArticlesDbContext dbContext,
         IPasswordsHasher hasher,
         IJwtProvider jwtProvider,
@@ -60,9 +60,9 @@ public static class AuthEndpoints
         {
             return TypedResults.BadRequest("Invalid username.");
         }
-        
+
     }
-    
+
     private static async Task<Results<Ok, BadRequest<string>>> SignupEndpointHandler(Request request,
         ArticlesDbContext dbContext,
         IPasswordsHasher hasher,
@@ -75,33 +75,36 @@ public static class AuthEndpoints
         catch (InvalidOperationException)
         {
             var validationResult = await validator.ValidateAsync(request.password);
-            
+
             if (!validationResult.IsValid) return TypedResults
                 .BadRequest($"{String.Join("; ", validationResult
                     .Errors.Select(x => x.ErrorMessage))}");
-            
+
             var user = new UsersEntity(
                 request.username,
                 hasher.HashPassword(request.password));
             try
             {
                 await dbContext.Users.AddAsync(user);
-                
+
                 var role = await dbContext.Roles.FindAsync(5);
-                
+
                 role.Users.Add(user);
-                
+
                 await dbContext.SaveChangesAsync();
-            
+
                 return TypedResults.Ok();
             }
             catch (InvalidOperationException)
             {
+                await dbContext.Users
+                .Where(u => u.UserName == request.username)
+                .ExecuteDeleteAsync();
                 return TypedResults.BadRequest("There's an error occured during assigning roles.");
             }
         }
-        
-        return TypedResults.BadRequest("This username is already taken.");    
+
+        return TypedResults.BadRequest("This username is already taken.");
     }
 
     private static async Task<Results<Ok, BadRequest<string>>> ChangePasswordHandler(ArticlesDbContext dbContext,
@@ -114,23 +117,23 @@ public static class AuthEndpoints
     {
         var userId = userData.GetUserId();
         var user = await dbContext.Users.FindAsync(userId);
-        
-        if (user == null) 
+
+        if (user == null)
             return TypedResults.BadRequest("Invalid userId");
-        
-        if (!hasher.VerifyHashedPassword(user.PasswordHash, oldPassword)) 
+
+        if (!hasher.VerifyHashedPassword(user.PasswordHash, oldPassword))
             return TypedResults.BadRequest("Invalid Password");
-        
-        if (newPassword != newPasswordRepeated) 
+
+        if (newPassword != newPasswordRepeated)
             return TypedResults.BadRequest("Passwords do not match");
-        
+
         var validationResult = await validator.ValidateAsync(newPassword);
-        if (!validationResult.IsValid) 
+        if (!validationResult.IsValid)
             return TypedResults.BadRequest("Your new password is too weak");
-        
+
         user.PasswordHash = hasher.HashPassword(newPassword);
         await dbContext.SaveChangesAsync();
-        
+
         return TypedResults.Ok();
     }
 
@@ -142,8 +145,8 @@ public static class AuthEndpoints
         var user = await dbContext.Users.FindAsync(userData.GetUserId());
         if (user == null)
             return TypedResults.BadRequest("Invalid userId");
-        
-        if (!hasher.VerifyHashedPassword(user.PasswordHash, request.password)) 
+
+        if (!hasher.VerifyHashedPassword(user.PasswordHash, request.password))
             return TypedResults.BadRequest("Invalid password");
 
         try
@@ -165,11 +168,3 @@ public static class AuthEndpoints
         return TypedResults.Ok();
     }
 }
-
-
-
-
-
-
-
-

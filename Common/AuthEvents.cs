@@ -5,6 +5,6 @@ public enum AuthEvents
     Login,
     Logout,
     Signup,
-    PasswordChanging,
-    UserNameChanging
+    ChangedPassword,
+    ChangedUserName
 }

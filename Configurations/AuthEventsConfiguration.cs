@@ -13,5 +13,6 @@ public class AuthEventsConfiguration : IEntityTypeConfiguration<AuthEventsEntity
         builder.Property(ae => ae.UserId).IsRequired();
         builder.Property(ae => ae.EventType).IsRequired();
         builder.Property(ae => ae.EventTime).IsRequired();
+        builder.Property(ae => ae.IsSucceeded).IsRequired();
     }
 }

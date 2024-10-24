@@ -9,6 +9,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 
 namespace ArticlesWebApp.Api;
 
@@ -26,6 +27,9 @@ public static class ConfigureServices
         builder.Services.AddScoped<IValidator<InputArticlesDto>, ArticlesValidator>();
         builder.Services.AddScoped<IValidator<InputCommentsDto>, CommentsValidator>();
         builder.Services.AddScoped<IValidator<string>, PasswordsValidator>();
+
+        builder.Logging.ClearProviders();
+        //builder.Logging.
     }
 
     private static void ConfigureAuth(this WebApplicationBuilder builder)
@@ -48,7 +52,7 @@ public static class ConfigureServices
                     OnMessageReceived = context =>
                     {
                         context.Token = context.Request.Cookies["auth"];
-                        
+
                         return Task.CompletedTask;
                     }
                 };
@@ -58,5 +62,13 @@ public static class ConfigureServices
 
         builder.Services.AddSingleton<IAuthorizationHandler, ResourceAuthorizationHandler>();
         builder.Services.AddSingleton<IAuthorizationHandler, RoleAuthorizationHandler>();
+    }
+
+    private static void AddSerilog(this WebApplicationBuilder builder)
+    {
+        builder.Host.UseSerilog((context, configuration) =>
+        {
+            configuration.ReadFrom.Configuration(context.Configuration);
+        });
     }
 }
