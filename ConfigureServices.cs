@@ -29,7 +29,7 @@ public static class ConfigureServices
         builder.Services.AddScoped<IValidator<string>, PasswordsValidator>();
 
         builder.Logging.ClearProviders();
-        //builder.Logging.
+        builder.AddSerilog();
     }
 
     private static void ConfigureAuth(this WebApplicationBuilder builder)

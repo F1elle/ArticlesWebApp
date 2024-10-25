@@ -6,5 +6,5 @@ public enum Events
     Updating,
     Deleting,
     Promoting,
-    Demoting
+    Demoting,
 }
