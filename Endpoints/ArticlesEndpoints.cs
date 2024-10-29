@@ -15,7 +15,7 @@ public static class ArticlesEndpoints
 {
     public static RouteGroupBuilder MapArticlesEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("articles");
+        var group = app.MapGroup("/articles");
 
         group.MapGet("/{articleId}", GetArticlesByIdHandler).AllowAnonymous()
              .WithSummary("Get articles by id");

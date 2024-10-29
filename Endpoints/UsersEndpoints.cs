@@ -12,7 +12,7 @@ public static class UsersEndpoints
 {
     public static RouteGroupBuilder MapUsersEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("users");
+        var group = app.MapGroup("/users");
         
         group.MapGet("/{id}/articles", GetUserArticlesHandler)
              .WithSummary("Returns all user articles");

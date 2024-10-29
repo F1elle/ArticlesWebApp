@@ -14,7 +14,7 @@ public static class AuthEndpoints
 {
     public static RouteGroupBuilder MapAuthEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("auth");
+        var group = app.MapGroup("/auth");
 
         group.MapPost("/signup", SignupEndpointHandler)
             .WithSummary("Sign up");

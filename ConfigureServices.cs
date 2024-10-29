@@ -30,6 +30,10 @@ public static class ConfigureServices
 
         builder.Logging.ClearProviders();
         builder.AddSerilog();
+
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.EventsLogDatabase()
+            .WriteTo.AuthEventsLogDatabase().CreateLogger();
     }
 
     private static void ConfigureAuth(this WebApplicationBuilder builder)

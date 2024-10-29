@@ -1,5 +1,6 @@
 using ArticlesWebApp.Api;
-using ArticlesWebApp.Api.Endpoints;
+using ArticlesWebApp.Api.Common;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
 builder.ConfigureAppServices();
+
 
 var app = builder.Build();
 
