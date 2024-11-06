@@ -13,7 +13,7 @@ public class EventsConfiguration : IEntityTypeConfiguration<EventsEntity>
         builder.Property(e => e.UserId).IsRequired();
         builder.Property(e => e.SubjectId).IsRequired();
         builder.Property(e => e.EventType).IsRequired();
-        //builder.Property(e => e.EventTime).IsRequired();
+        builder.Property(e => e.TimeStamp).IsRequired();
         builder.Property(e => e.IsSucceeded).IsRequired();
     }
 }

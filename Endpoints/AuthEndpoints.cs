@@ -43,7 +43,8 @@ public static class AuthEndpoints
         ArticlesDbContext dbContext,
         IPasswordsHasher hasher,
         IJwtProvider jwtProvider,
-        HttpContext httpContext)
+        HttpContext httpContext,
+        IUserEventsLogger userEventsLogger)
     {
         try
         {
@@ -52,12 +53,25 @@ public static class AuthEndpoints
             if (hasher.VerifyHashedPassword(user.PasswordHash, request.password))
             {
                 httpContext.Response.Cookies.Append("auth", jwtProvider.GetToken(user));
+                await userEventsLogger.WriteLogAsync(new AuthEventsEntity(
+                    true,
+                    user.Id,
+                    AuthEvents.Login));
                 return TypedResults.Ok();
             }
+
+            await userEventsLogger.WriteLogAsync(new AuthEventsEntity(
+                false,
+                httpContext.User.GetTempUserId() ?? Guid.Empty,
+                AuthEvents.Login));
             return TypedResults.BadRequest("Invalid password.");
         }
         catch (InvalidOperationException)
         {
+            await userEventsLogger.WriteLogAsync(new AuthEventsEntity(
+                false,
+                httpContext.User.GetTempUserId() ?? Guid.Empty,
+                AuthEvents.Login));
             return TypedResults.BadRequest("Invalid username.");
         }
 
@@ -66,7 +80,9 @@ public static class AuthEndpoints
     private static async Task<Results<Ok, BadRequest<string>>> SignupEndpointHandler(Request request,
         ArticlesDbContext dbContext,
         IPasswordsHasher hasher,
-        IValidator<string> validator)
+        IValidator<string> validator,
+        ClaimsPrincipal claimsPrincipal,
+        IUserEventsLogger userEventsLogger)
     {
         try
         {
@@ -76,7 +92,8 @@ public static class AuthEndpoints
         {
             var validationResult = await validator.ValidateAsync(request.password);
 
-            if (!validationResult.IsValid) return TypedResults
+            if (!validationResult.IsValid)
+                return TypedResults
                 .BadRequest($"{String.Join("; ", validationResult
                     .Errors.Select(x => x.ErrorMessage))}");
 
@@ -92,6 +109,11 @@ public static class AuthEndpoints
                 role.Users.Add(user);
 
                 await dbContext.SaveChangesAsync();
+
+                await userEventsLogger.WriteLogAsync(new AuthEventsEntity(
+                    true,
+                    user.Id,
+                    AuthEvents.Signup));
 
                 return TypedResults.Ok();
             }
@@ -113,16 +135,25 @@ public static class AuthEndpoints
             string oldPassword,
             string newPassword,
             string newPasswordRepeated,
-            ClaimsPrincipal userData)
+            ClaimsPrincipal userData,
+            IUserEventsLogger userEventsLogger)
     {
         var userId = userData.GetUserId();
         var user = await dbContext.Users.FindAsync(userId);
 
         if (user == null)
-            return TypedResults.BadRequest("Invalid userId");
+        {
+            return TypedResults.BadRequest("Invalid userId. Are you signed in?");
+        }
 
         if (!hasher.VerifyHashedPassword(user.PasswordHash, oldPassword))
+        {
+            await userEventsLogger.WriteLogAsync(new AuthEventsEntity(
+                false,
+                userId ?? Guid.Empty,
+                AuthEvents.ChangedPassword));
             return TypedResults.BadRequest("Invalid Password");
+        }
 
         if (newPassword != newPasswordRepeated)
             return TypedResults.BadRequest("Passwords do not match");
@@ -134,20 +165,34 @@ public static class AuthEndpoints
         user.PasswordHash = hasher.HashPassword(newPassword);
         await dbContext.SaveChangesAsync();
 
+        await userEventsLogger.WriteLogAsync(new AuthEventsEntity(
+            true,
+            user.Id,
+            AuthEvents.ChangedPassword));
+
         return TypedResults.Ok();
     }
 
     private static async Task<Results<Ok, BadRequest<string>>> ChangeLoginHandler(ArticlesDbContext dbContext,
             ClaimsPrincipal userData,
             Request request,
-            IPasswordsHasher hasher)
-    {
+            IPasswordsHasher hasher,
+            IUserEventsLogger userEventsLogger) { 
+        
         var user = await dbContext.Users.FindAsync(userData.GetUserId());
         if (user == null)
-            return TypedResults.BadRequest("Invalid userId");
+        {
+            return TypedResults.BadRequest("Are you signed in?");
+        }
 
         if (!hasher.VerifyHashedPassword(user.PasswordHash, request.password))
+        {
+            await userEventsLogger.WriteLogAsync(new AuthEventsEntity(
+                false,
+                userData.GetUserId() ?? Guid.Empty,
+                AuthEvents.ChangedUserName));
             return TypedResults.BadRequest("Invalid password");
+        }
 
         try
         {
@@ -157,6 +202,10 @@ public static class AuthEndpoints
         {
             user.UserName = request.username;
             await dbContext.SaveChangesAsync();
+            await userEventsLogger.WriteLogAsync(new AuthEventsEntity(
+                true,
+                userData.GetUserId() ?? Guid.Empty,
+                AuthEvents.ChangedUserName));
             return TypedResults.Ok();
         }
         return TypedResults.BadRequest("This username is already taken");

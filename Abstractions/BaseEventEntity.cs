@@ -1,9 +1,9 @@
 namespace ArticlesWebApp.Api.Abstractions;
 
-public abstract class BaseEventEntity
+public abstract class BaseEventEntity(bool isSucceeded, Guid userId)
 {
     public Guid Id { get; init; }
-    public string Severity { get; init; } = string.Empty;
     public DateTime TimeStamp { get; init; } = DateTime.Now;
-    public string? Exception { get; init; }
+    public bool IsSucceeded { get; init; } = isSucceeded;
+    public Guid UserId { get; init; } = userId;
 }

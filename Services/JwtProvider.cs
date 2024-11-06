@@ -27,4 +27,19 @@ public class JwtProvider(IOptions<JwtOptions> options) : IJwtProvider
         
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    public string GetTempToken()
+    {
+        Claim[] claims = [new Claim(ClaimTypes.Anonymous, Guid.NewGuid().ToString())];
+
+        var signingCredentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey)),
+            SecurityAlgorithms.HmacSha256);
+        var token = new JwtSecurityToken(
+            claims: claims,
+            signingCredentials: signingCredentials,
+            expires: DateTime.Now.AddDays(1));
+        
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 }

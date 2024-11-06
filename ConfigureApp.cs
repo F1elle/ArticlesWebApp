@@ -1,6 +1,8 @@
+using ArticlesWebApp.Api.Abstractions;
 using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.Endpoints;
+using ArticlesWebApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace ArticlesWebApp.Api;
@@ -56,7 +58,7 @@ public static class ConfigureApp
             context.Request.Cookies.TryGetValue("auth", out var authCookie);
             if (authCookie == null)
             {
-                context.Response.Cookies.Append("tempId", Guid.NewGuid().ToString());
+                context.Response.Cookies.Append("tempId", app.Services.GetRequiredService<IJwtProvider>().GetTempToken());
             }
             await next(context);
         });

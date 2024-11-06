@@ -4,12 +4,12 @@ using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.DTOs;
 using ArticlesWebApp.Api.Services;
+using ArticlesWebApp.Api.Services.Logging;
 using ArticlesWebApp.Api.Services.Validators;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
 
 namespace ArticlesWebApp.Api;
 
@@ -17,23 +17,26 @@ public static class ConfigureServices
 {
     public static void ConfigureAppServices(this WebApplicationBuilder builder)
     {
+        // Swagger
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+
+        // DbContext
         builder.Services.AddDbContext<ArticlesDbContext>();
+
+        // Auth features
         builder.Services.AddScoped<IJwtProvider, JwtProvider>();
         builder.Services.AddScoped<IPasswordsHasher, PasswordsHasher>();
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(nameof(JwtOptions)));
         builder.ConfigureAuth();
+
+        // Validation
         builder.Services.AddScoped<IValidator<InputArticlesDto>, ArticlesValidator>();
         builder.Services.AddScoped<IValidator<InputCommentsDto>, CommentsValidator>();
         builder.Services.AddScoped<IValidator<string>, PasswordsValidator>();
 
-        builder.Logging.ClearProviders();
-        builder.AddSerilog();
-
-        Log.Logger = new LoggerConfiguration()
-            .WriteTo.EventsLogDatabase()
-            .WriteTo.AuthEventsLogDatabase().CreateLogger();
+        // Logging
+        builder.Services.AddScoped<IUserEventsLogger, UserEventsLogger>();
     }
 
     private static void ConfigureAuth(this WebApplicationBuilder builder)
@@ -66,13 +69,5 @@ public static class ConfigureServices
 
         builder.Services.AddSingleton<IAuthorizationHandler, ResourceAuthorizationHandler>();
         builder.Services.AddSingleton<IAuthorizationHandler, RoleAuthorizationHandler>();
-    }
-
-    private static void AddSerilog(this WebApplicationBuilder builder)
-    {
-        builder.Host.UseSerilog((context, configuration) =>
-        {
-            configuration.ReadFrom.Configuration(context.Configuration);
-        });
     }
 }

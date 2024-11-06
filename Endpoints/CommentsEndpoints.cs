@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using ArticlesWebApp.Api.Abstractions;
 using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.DTOs;
@@ -49,7 +50,8 @@ public static class CommentsEndpoints
             ClaimsPrincipal user,
             Guid articleId,
             Guid? commentId,
-            IValidator<InputCommentsDto> validator)
+            IValidator<InputCommentsDto> validator,
+            IUserEventsLogger userEventsLogger)
     {
         var validationResult = await validator.ValidateAsync(inputComment);
         
@@ -63,6 +65,11 @@ public static class CommentsEndpoints
         var comment = new CommentsEntity(uid, articleId, inputComment.Content, commentId);
         await dbContext.Comments.AddAsync(comment);
         await dbContext.SaveChangesAsync();
+        await userEventsLogger.WriteLogAsync(new EventsEntity(
+            true,
+            userId ?? Guid.Empty,
+            comment.Id,
+            Events.Creating));
         return TypedResults.Ok(comment.Id);
     }
 
@@ -72,7 +79,8 @@ public static class CommentsEndpoints
             Guid commentId,
             InputCommentsDto inputComment,
             IAuthorizationService authorizationService,
-            IValidator<InputCommentsDto> validator)
+            IValidator<InputCommentsDto> validator,
+            IUserEventsLogger userEventsLogger)
     {
         var comment = await dbContext.Comments.FindAsync(commentId);
         if (comment == null)
@@ -92,13 +100,19 @@ public static class CommentsEndpoints
         
         comment.Content = inputComment.Content;
         await dbContext.SaveChangesAsync();
+        await userEventsLogger.WriteLogAsync(new EventsEntity(
+            true,
+            user.GetUserId() ?? Guid.Empty,
+            commentId,
+            Events.Updating));
         return TypedResults.Ok(comment.Id);
     }
 
     private static async Task<Results<NoContent, ForbidHttpResult>> DeleteCommentsHandler(ArticlesDbContext dbContext,
             ClaimsPrincipal user,
             Guid commentId,
-            IAuthorizationService authorizationService)
+            IAuthorizationService authorizationService,
+            IUserEventsLogger userEventsLogger)
     {
         var comment = await dbContext.Comments.FindAsync(commentId);
         
@@ -108,6 +122,12 @@ public static class CommentsEndpoints
         
         await dbContext.Comments.Where(c => c.Id == commentId)
             .ExecuteDeleteAsync();
+
+        await userEventsLogger.WriteLogAsync(new EventsEntity(
+            true,
+            user.GetUserId() ?? Guid.Empty,
+            commentId,
+            Events.Deleting));
         
         return TypedResults.NoContent();
     }

@@ -3,13 +3,12 @@ using ArticlesWebApp.Api.Abstractions;
 
 namespace ArticlesWebApp.Api.Entities;
 
-public class EventsEntity : BaseEventEntity
+public class EventsEntity(
+        bool isSucceeded,
+        Guid userId,
+        Guid subjectId,
+        Events eventType): BaseEventEntity(isSucceeded, userId)
 {
-    //public Guid Id { get; init; }
-    public Guid UserId { get; init; } //= string.Empty; //= userId;
-    public Guid SubjectId { get; init; } //= subjectId;
-    public Events EventType { get; init; } //= eventType;
-    public bool IsSucceeded { get; set; } //= isSucceeded;
-    //public DateTime EventTime { get; init; }
-    //public string? EventString { get; init; }
+    public Guid SubjectId { get; init; } = subjectId;
+    public Events EventType { get; init; } = eventType;
 }

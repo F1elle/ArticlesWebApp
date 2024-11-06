@@ -1,6 +1,4 @@
 using ArticlesWebApp.Api;
-using ArticlesWebApp.Api.Common;
-using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
