@@ -2,9 +2,9 @@ namespace ArticlesWebApp.Api.Common;
 
 public enum AuthEvents
 {
-    Login,
-    Logout,
-    Signup,
-    ChangedPassword,
-    ChangedUserName
+    Login = 0,
+    Logout = 1,
+    Signup = 2,
+    ChangedPassword = 3,
+    ChangedUserName = 4
 }
