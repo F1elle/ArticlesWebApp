@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ArticlesWebApp.Api.Migrations
 {
     [DbContext(typeof(ArticlesDbContext))]
-    [Migration("20241001221710_newfeatures")]
-    partial class newfeatures
+    [Migration("20241107152735_Logging")]
+    partial class Logging
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -52,6 +52,29 @@ namespace ArticlesWebApp.Api.Migrations
                     b.ToTable("Articles", (string)null);
                 });
 
+            modelBuilder.Entity("ArticlesWebApp.Api.Entities.AuthEventsEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSucceeded")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("TimeStamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AuthEvents", (string)null);
+                });
+
             modelBuilder.Entity("ArticlesWebApp.Api.Entities.CommentsEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -83,6 +106,32 @@ namespace ArticlesWebApp.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Comments", (string)null);
+                });
+
+            modelBuilder.Entity("ArticlesWebApp.Api.Entities.EventsEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSucceeded")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("TimeStamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Events", (string)null);
                 });
 
             modelBuilder.Entity("ArticlesWebApp.Api.Entities.LikesEntity", b =>

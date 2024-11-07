@@ -55,10 +55,11 @@ public static class ConfigureApp
     {
         app.Use(async (context, next) =>
         {
-            context.Request.Cookies.TryGetValue("auth", out var authCookie);
-            if (authCookie == null)
+            if (context.User.GetUserId() == null)
             {
-                context.Response.Cookies.Append("tempId", app.Services.GetRequiredService<IJwtProvider>().GetTempToken());
+                using var scope = app.Services.CreateScope();
+                var jwtProvider = scope.ServiceProvider.GetRequiredService<IJwtProvider>();
+                context.Response.Cookies.Append("tempId", jwtProvider.GetTempToken());
             }
             await next(context);
         });

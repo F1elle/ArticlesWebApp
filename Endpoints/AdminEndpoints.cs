@@ -4,6 +4,7 @@ using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.Entities;
 using ArticlesWebApp.Api.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace ArticlesWebApp.Api.Endpoints;
@@ -20,6 +21,12 @@ public static class AdminEndpoints
         group.MapPut("/demote/{id}", DemoteUsersHandler).RequireAuthorization(policy =>
                 policy.AddRequirements(new RoleRequirement(Roles.SuperAdmin)))
             .WithSummary("Demote users");
+        group.MapGet("/logs", GetUserLogsHandler).RequireAuthorization(policy =>
+            policy.AddRequirements(new RoleRequirement(Roles.Admin)))
+            .WithSummary("Get users logs");
+        group.MapGet("/authlogs", GetAuthLogsHandler).RequireAuthorization(policy =>
+            policy.AddRequirements(new RoleRequirement(Roles.SuperAdmin)))
+            .WithSummary("Get auth logs");
 
         return group;
     }
@@ -62,5 +69,17 @@ public static class AdminEndpoints
             userId,
             Events.Demoting));
         return TypedResults.Ok();
+    }
+
+    private static async Task<Ok<List<EventsEntity>>> GetUserLogsHandler(ArticlesDbContext dbContext)
+    {
+        var result = await dbContext.Events.ToListAsync();
+        return TypedResults.Ok(result);
+    }
+
+    private static async Task<Ok<List<AuthEventsEntity>>> GetAuthLogsHandler(ArticlesDbContext dbContext)
+    {
+        var result = await dbContext.AuthEvents.ToListAsync();
+        return TypedResults.Ok(result);
     }
 }

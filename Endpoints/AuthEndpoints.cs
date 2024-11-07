@@ -53,6 +53,7 @@ public static class AuthEndpoints
             if (hasher.VerifyHashedPassword(user.PasswordHash, request.password))
             {
                 httpContext.Response.Cookies.Append("auth", jwtProvider.GetToken(user));
+                httpContext.Response.Cookies.Delete("tempId");
                 await userEventsLogger.WriteLogAsync(new AuthEventsEntity(
                     true,
                     user.Id,
@@ -214,6 +215,7 @@ public static class AuthEndpoints
     private static Ok LogOutHandler(HttpContext httpContext)
     {
         httpContext.Response.Cookies.Delete("auth");
+        
         return TypedResults.Ok();
     }
 }

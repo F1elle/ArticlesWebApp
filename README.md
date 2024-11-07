@@ -1,6 +1,7 @@
+
 # Articles web application
 
-It's a simple article web application written in **ASP.NET Core** using **MinimalAPI** 
+It's a simple article web application written in **ASP.NET Core** using **MinimalAPI**
 
 Just another learning project
 
@@ -21,3 +22,14 @@ Just another learning project
 - [x] Proper authentication and authorization
 
 - [x] Proper data validation
+
+- [x] User Actions Log
+
+
+
+#### Test user credentials
+| Role | Nick | Password |
+|--|--|--|
+| User | LongUserNickName | LongUserPassword1$ |
+| Admin | LongAdminUserName | LongAdminPassword1$ |
+| SuperAdmin | LongSuperAdminName | LongSuperAdminPassword1$ |
