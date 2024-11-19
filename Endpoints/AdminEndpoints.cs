@@ -31,43 +31,47 @@ public static class AdminEndpoints
         return group;
     }
 
-    private static async Task<IStatusCodeHttpResult> PromoteUsersHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok, NotFound<string>>> PromoteUsersHandler(ArticlesDbContext dbContext,
             IUserEventsLogger userEventsLogger,
             Guid userId,
-            ClaimsPrincipal admin)
+            ClaimsPrincipal userClaims)
     {
         var user = await dbContext.Users.FindAsync(userId);
 
         if (user is null)
-            return TypedResults.BadRequest("User not found");
+            return TypedResults.NotFound("User not found");
         
         user.Role = await dbContext.Roles.FirstAsync(r => r.Name == "Admin");
         await dbContext.SaveChangesAsync();
+        
         await userEventsLogger.WriteLogAsync(new EventsEntity(
             true,
-            admin.GetUserId() ?? Guid.Empty,
+            userClaims.GetUserId() ?? Guid.Empty,
             userId,
             Events.Promoting));
+        
         return TypedResults.Ok();
     }
 
-    private static async Task<IStatusCodeHttpResult> DemoteUsersHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok, NotFound<string>>> DemoteUsersHandler(ArticlesDbContext dbContext,
             IUserEventsLogger userEventsLogger,
             Guid userId,
-            ClaimsPrincipal admin)
+            ClaimsPrincipal userClaims)
     {
         var user = await dbContext.Users.FindAsync(userId);
 
         if (user is null)
-            return TypedResults.BadRequest("User not found");
+            return TypedResults.NotFound("User not found");
         
         user.Role = await dbContext.Roles.FirstAsync(r => r.Name == "User");
         await dbContext.SaveChangesAsync();
+        
         await userEventsLogger.WriteLogAsync(new EventsEntity(
             true,
-            admin.GetUserId() ?? Guid.Empty,
+            userClaims.GetUserId() ?? Guid.Empty,
             userId,
             Events.Demoting));
+        
         return TypedResults.Ok();
     }
 

@@ -2,7 +2,7 @@ using ArticlesWebApp.Api.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace ArticlesWebApp.Api.Configurations;
+namespace ArticlesWebApp.Api.EntitiesConfigurations;
 
 public class ArticlesConfiguration : IEntityTypeConfiguration<ArticlesEntity>
 {
@@ -14,7 +14,13 @@ public class ArticlesConfiguration : IEntityTypeConfiguration<ArticlesEntity>
         builder.Property(a => a.Content).IsRequired().HasMaxLength(25000);
         builder.Property(a => a.PublishDate).IsRequired();
         builder.Property(a => a.OwnerId).IsRequired();
-        builder.HasMany(a => a.Comments).WithOne().HasForeignKey(c => c.ArticleId);
-        builder.HasMany(a => a.Likes).WithOne().HasForeignKey(l => l.PostId);
+        builder.HasMany(a => a.Comments)
+            .WithOne()
+            .HasForeignKey(c => c.ArticleId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(a => a.Likes)
+            .WithOne()
+            .HasForeignKey(l => l.PostId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

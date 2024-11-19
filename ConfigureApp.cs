@@ -1,9 +1,10 @@
+using System.IdentityModel.Tokens.Jwt;
 using ArticlesWebApp.Api.Abstractions;
 using ArticlesWebApp.Api.Common;
 using ArticlesWebApp.Api.Data;
 using ArticlesWebApp.Api.Endpoints;
-using ArticlesWebApp.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace ArticlesWebApp.Api;
 
@@ -18,14 +19,14 @@ public static class ConfigureApp
             app.UseSwagger();
             app.UseSwaggerUI();
         }
-
+        
+        await app.DeleteAuthCookieIfInvalid();
+        await app.GiveTempIdCookie();
+        
         app.MapEndpoints();
 
         app.UseAuthentication();
         app.UseAuthorization();
-
-        await app.CheckJwtCookieExpiration();
-        await app.GiveTempId();
 
         await app.MigrateDb();
     }
@@ -39,27 +40,41 @@ public static class ConfigureApp
         app.MapAdminEndpoints();
     }
 
-    private static async Task CheckJwtCookieExpiration(this WebApplication app)
+    private static async Task DeleteAuthCookieIfInvalid(this WebApplication app)
     {
         app.Use(async (context, next) =>
         {
-            if (context.User.GetUserId() == null)
+            using var scope = app.Services.CreateScope();
+            var cookies = scope.ServiceProvider.GetRequiredService<IOptions<CookiesNames>>();
+            var cookie = context.Request.Cookies
+                .FirstOrDefault(x => x.Key == cookies.Value.Authorized);
+
+            if (cookie.Value != null)
             {
-                context.Response.Cookies.Delete("auth");
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var token = tokenHandler.ReadJwtToken(cookie.Value);
+                if (token.ValidTo < DateTime.Now)
+                {
+                    context.Response.Cookies.Delete(cookies.Value.Authorized);
+                }
             }
+            
             await next(context);
         });
     }
 
-    private static async Task GiveTempId(this WebApplication app)
+    private static async Task GiveTempIdCookie(this WebApplication app)
     {
         app.Use(async (context, next) =>
         {
-            if (context.User.GetUserId() == null)
+            using var scope = app.Services.CreateScope();
+            var cookies = scope.ServiceProvider.GetRequiredService<IOptions<CookiesNames>>();
+            var authCookie = context.Request.Cookies
+                .FirstOrDefault(x => x.Key == cookies.Value.Authorized);
+            if (authCookie.Value == null)
             {
-                using var scope = app.Services.CreateScope();
                 var jwtProvider = scope.ServiceProvider.GetRequiredService<IJwtProvider>();
-                context.Response.Cookies.Append("tempId", jwtProvider.GetTempToken());
+                context.Response.Cookies.Append(cookies.Value.Anonymous, jwtProvider.GenerateTempToken());
             }
             await next(context);
         });

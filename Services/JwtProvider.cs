@@ -15,7 +15,7 @@ public class JwtProvider(IOptions<JwtOptions> options) : IJwtProvider
     
     public string GetToken(UsersEntity user)
     {
-        Claim[] claims = [new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())];
+        Claim[] claims = [new (ClaimTypes.NameIdentifier, user.Id.ToString())];
         
         var signingCredentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey)),
@@ -28,9 +28,9 @@ public class JwtProvider(IOptions<JwtOptions> options) : IJwtProvider
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public string GetTempToken()
+    public string GenerateTempToken()
     {
-        Claim[] claims = [new Claim(ClaimTypes.Anonymous, Guid.NewGuid().ToString())];
+        Claim[] claims = [new (ClaimTypes.Anonymous, Guid.NewGuid().ToString())];
 
         var signingCredentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey)),

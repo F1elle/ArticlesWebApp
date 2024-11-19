@@ -1,22 +1,17 @@
-using ArticlesWebApp.Api.Configurations;
 using ArticlesWebApp.Api.Entities;
+using ArticlesWebApp.Api.EntitiesConfigurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace ArticlesWebApp.Api.Data;
 
-public class ArticlesDbContext : DbContext
+public class ArticlesDbContext(
+    DbContextOptions<ArticlesDbContext> options,
+    IConfiguration configuration)
+    : DbContext(options)
 {
-    private readonly IConfiguration _configuration;
-    
-    public ArticlesDbContext(DbContextOptions<ArticlesDbContext> options, 
-        IConfiguration configuration) : base(options)
-    {
-        _configuration = configuration;
-    }
-
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite(_configuration.GetConnectionString("DbConnection"));
+        optionsBuilder.UseSqlite(configuration.GetConnectionString("DbConnection"));
     }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -35,17 +35,20 @@ public static class CommentsEndpoints
         return comments;
     }
 
-    private static async Task<Results<NotFound, Ok<CommentsEntity>>> GetCommentsByIdHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<NotFound, Ok<CommentsEntity>>> GetCommentsByIdHandler(
+            ArticlesDbContext dbContext,
             Guid commentId)
     {
-        var comment = await dbContext.Comments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var comment = await dbContext.Comments.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == commentId);
         
         return comment is null
             ? TypedResults.NotFound()
             : TypedResults.Ok(comment);
     }
     
-    private static async Task<Results<Ok<Guid>, BadRequest<string>, ForbidHttpResult>> PostCommentsHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok<Guid>, BadRequest<string>, ForbidHttpResult>> PostCommentsHandler(
+            ArticlesDbContext dbContext,
             InputCommentsDto inputComment,
             ClaimsPrincipal user,
             Guid articleId,
@@ -67,7 +70,7 @@ public static class CommentsEndpoints
         await dbContext.SaveChangesAsync();
         await userEventsLogger.WriteLogAsync(new EventsEntity(
             true,
-            userId ?? Guid.Empty,
+            uid,
             comment.Id,
             Events.Creating));
         return TypedResults.Ok(comment.Id);
@@ -89,11 +92,9 @@ public static class CommentsEndpoints
         }
         
         var authResult = await authorizationService.AuthorizeAsync(user, comment, new RoleRequirement(Roles.User));
-
         if (!authResult.Succeeded) return TypedResults.Forbid();
         
         var validationResult = await validator.ValidateAsync(inputComment);
-        
         if (!validationResult.IsValid) return TypedResults
             .BadRequest($"{String.Join("; ", validationResult
                 .Errors.Select(x => x.ErrorMessage))}");
@@ -108,21 +109,27 @@ public static class CommentsEndpoints
         return TypedResults.Ok(comment.Id);
     }
 
-    private static async Task<Results<NoContent, ForbidHttpResult>> DeleteCommentsHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<NoContent, ForbidHttpResult, NotFound>> DeleteCommentsHandler(
+            ArticlesDbContext dbContext,
             ClaimsPrincipal user,
             Guid commentId,
             IAuthorizationService authorizationService,
             IUserEventsLogger userEventsLogger)
     {
-        var comment = await dbContext.Comments.FindAsync(commentId);
+        var nullableComment = await dbContext.Comments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == commentId);
+        
+        if (nullableComment is not {} comment) return TypedResults.NotFound();
         
         var authResult = await authorizationService.AuthorizeAsync(user, comment, new RoleRequirement(Roles.User));
-
         if (!authResult.Succeeded) return TypedResults.Forbid();
         
-        await dbContext.Comments.Where(c => c.Id == commentId)
+        var deleted = await dbContext.Comments.Where(c => c.Id == commentId)
             .ExecuteDeleteAsync();
 
+        if (deleted == 0) return TypedResults.NotFound();
+        
         await userEventsLogger.WriteLogAsync(new EventsEntity(
             true,
             user.GetUserId() ?? Guid.Empty,
@@ -132,30 +139,30 @@ public static class CommentsEndpoints
         return TypedResults.NoContent();
     }
 
-    private static async Task<Results<ForbidHttpResult, Ok>> LikeCommentsHandler(ArticlesDbContext dbContext,
-        ClaimsPrincipal user,
-        Guid commentId)
+    private static async Task<Results<ForbidHttpResult, Ok, NotFound>> LikeCommentsHandler(
+            ArticlesDbContext dbContext,
+            ClaimsPrincipal user,
+            Guid commentId)
     {
         var userId = user.GetUserId();
         if (userId is not { } uid) return TypedResults.Forbid();
-        try
-        {
-            await dbContext.CommentsLikes
-                .AsNoTracking()
-                .FirstAsync(e => e.PostId == commentId && e.OwnerId == uid);
-            
-            await dbContext.CommentsLikes
-                .Where(l => l.PostId == commentId && l.OwnerId == uid)
-                .ExecuteDeleteAsync();
-            
-            return TypedResults.Ok();
-        }
-        catch (InvalidOperationException)
-        {
-            await dbContext.CommentsLikes.AddAsync(new LikesEntity(uid, commentId));
-            await dbContext.SaveChangesAsync();
-            return TypedResults.Ok();
-        }
+        
+        var comment = await dbContext.Comments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == commentId);
+        
+        if (comment is null) return TypedResults.NotFound();
+
+        var deleted = await dbContext.CommentsLikes
+            .Where(e => e.PostId == commentId && e.OwnerId == uid)
+            .ExecuteDeleteAsync();
+        
+        if (deleted > 0) return TypedResults.Ok();
+        
+        await dbContext.CommentsLikes.AddAsync(new LikesEntity(uid, commentId));
+        await dbContext.SaveChangesAsync();
+        
+        return TypedResults.Ok();
     }
 }
 

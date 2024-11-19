@@ -20,6 +20,9 @@ public static class ConfigureServices
         // Swagger
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        
+        // signalr
+        builder.Services.AddSignalR();
 
         // DbContext
         builder.Services.AddDbContext<ArticlesDbContext>();
@@ -29,6 +32,10 @@ public static class ConfigureServices
         builder.Services.AddScoped<IPasswordsHasher, PasswordsHasher>();
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(nameof(JwtOptions)));
         builder.ConfigureAuth();
+        
+        // Cookies for auth
+        builder.Services.Configure<CookiesNames>(
+            builder.Configuration.GetSection(nameof(CookiesNames)));
 
         // Validation
         builder.Services.AddScoped<IValidator<InputArticlesDto>, ArticlesValidator>();
@@ -41,6 +48,7 @@ public static class ConfigureServices
 
     private static void ConfigureAuth(this WebApplicationBuilder builder)
     {
+        var cookiesNames = builder.Configuration.GetSection(nameof(CookiesNames)).Get<CookiesNames>();
         var jwtOptions = builder.Configuration.GetSection(nameof(JwtOptions)).Get<JwtOptions>();
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
@@ -58,7 +66,7 @@ public static class ConfigureServices
                 {
                     OnMessageReceived = context =>
                     {
-                        context.Token = context.Request.Cookies["auth"];
+                        context.Token = context.Request.Cookies[cookiesNames!.Authorized];
 
                         return Task.CompletedTask;
                     }
@@ -66,7 +74,7 @@ public static class ConfigureServices
             });
 
         builder.Services.AddAuthorization();
-
+        
         builder.Services.AddSingleton<IAuthorizationHandler, ResourceAuthorizationHandler>();
         builder.Services.AddSingleton<IAuthorizationHandler, RoleAuthorizationHandler>();
     }

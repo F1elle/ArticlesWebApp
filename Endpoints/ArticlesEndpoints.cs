@@ -34,17 +34,17 @@ public static class ArticlesEndpoints
         return group;
     }
     
-    private static async Task<Results<Ok<Guid>, BadRequest<string>, ForbidHttpResult>> PostArticlesHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok<Guid>, BadRequest<string>, UnauthorizedHttpResult>> PostArticlesHandler(ArticlesDbContext dbContext,
             IUserEventsLogger userEventsLogger,
             InputArticlesDto inputArticle,
-            ClaimsPrincipal author,
+            ClaimsPrincipal userClaims,
             IValidator<InputArticlesDto> validator)
     {
         var validationResult = await validator.ValidateAsync(inputArticle);
-        var authorId = author.GetUserId() ?? Guid.Empty;
+        var userId = userClaims.GetUserId() ?? Guid.Empty;
 
-        if (authorId == Guid.Empty)
-            return TypedResults.Forbid();
+        if (userId == Guid.Empty)
+            return TypedResults.Unauthorized();
         
         if (!validationResult.IsValid) 
         {
@@ -57,36 +57,39 @@ public static class ArticlesEndpoints
             Title = inputArticle.Title,
             Content = inputArticle.Content,
             PublishDate = DateOnly.FromDateTime(DateTime.Today),
-            OwnerId = authorId
+            OwnerId = userId
         };
         
         await dbContext.Articles.AddAsync(article);
         await dbContext.SaveChangesAsync();
+        
         await userEventsLogger.WriteLogAsync(new EventsEntity(
             true,
-            authorId,
+            userId,
             article.Id,
             Events.Creating));
+        
         return TypedResults.Ok(article.Id);
     }
 
-    private static async Task<Results<Ok, NotFound, ForbidHttpResult, BadRequest<string>>> UpdateArticlesHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<Ok, NotFound, ForbidHttpResult, BadRequest<string>>> UpdateArticlesHandler(
+            ArticlesDbContext dbContext,
             Guid articleId, 
             InputArticlesDto inputArticle,
-            ClaimsPrincipal user,
+            ClaimsPrincipal userClaims,
             IAuthorizationService authorizationService,
             IValidator<InputArticlesDto> validator,
             IUserEventsLogger userEventsLogger)
     {
         var article = await dbContext.Articles.FindAsync(articleId);
+        
         if (article == null) return TypedResults.NotFound();
         
         
-        var authResult = await authorizationService.AuthorizeAsync(user, article, new RoleRequirement(Roles.User));
+        var authResult = await authorizationService.AuthorizeAsync(userClaims, article, new RoleRequirement(Roles.User));
 
         if (!authResult.Succeeded)
             return TypedResults.Forbid();
-        
         
         var validationResult = await validator.ValidateAsync(inputArticle);
         
@@ -98,24 +101,27 @@ public static class ArticlesEndpoints
         article.Content = inputArticle.Content;
         article.Title = inputArticle.Title;
         article.ModifiedDate = DateOnly.FromDateTime(DateTime.Today);
+        
         await dbContext.SaveChangesAsync();
+        
         await userEventsLogger.WriteLogAsync(new EventsEntity(
             true,
-            user.GetUserId() ?? Guid.Empty,
+            userClaims.GetUserId() ?? Guid.Empty,
             articleId,
             Events.Updating));
+        
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<Ok<ArticlesEntity>, NotFound, ForbidHttpResult>> GetArticlesByIdHandler(ArticlesDbContext dbContext,
-            Guid articleId,
-            ClaimsPrincipal user)
+    private static async Task<Results<Ok<ArticlesEntity>, NotFound, ForbidHttpResult>> GetArticlesByIdHandler(
+            ArticlesDbContext dbContext,
+            Guid articleId)
     {
         var article = await dbContext.Articles
-        .AsNoTracking()
-        .Where(e => e.Id == articleId)
-        .Include(a => a.Comments)
-        .FirstOrDefaultAsync();
+            .AsNoTracking()
+            .Where(e => e.Id == articleId)
+            .Include(a => a.Comments)
+            .FirstOrDefaultAsync();
 
         if (article == null)
         {
@@ -125,56 +131,59 @@ public static class ArticlesEndpoints
         
     }
 
-    private static async Task<Results<NoContent, ForbidHttpResult>> DeleteArticlesHandler(ArticlesDbContext dbContext,
+    private static async Task<Results<NoContent, ForbidHttpResult, NotFound, BadRequest<string>>> DeleteArticlesHandler(
+            ArticlesDbContext dbContext,
             Guid articleId,
-            ClaimsPrincipal user,
+            ClaimsPrincipal userClaims,
             IAuthorizationService authorizationService,
             IUserEventsLogger userEventsLogger)
     {
-        var article = await dbContext.Articles.FindAsync(articleId);
+        var nullableArticle = await dbContext.Articles
+            .AsNoTracking().FirstOrDefaultAsync(a => a.Id == articleId);
         
-        var authResult = await authorizationService.AuthorizeAsync(user, article, new RoleRequirement(Roles.User));
-
-        if (!authResult.Succeeded) return TypedResults.Forbid();
+        if (nullableArticle is not { } article) return TypedResults.NotFound();
         
+        var authResult = await authorizationService
+            .AuthorizeAsync(userClaims, article, new RoleRequirement(Roles.User));
+        if (!authResult.Succeeded) return TypedResults.Forbid(); 
         
-        await dbContext.Articles
+        var deleted = await dbContext.Articles
             .Where(a => a.Id == articleId)
             .ExecuteDeleteAsync();
 
+        if (deleted == 0) return TypedResults.BadRequest("Something went wrong. Nothing deleted");
+        
         await userEventsLogger.WriteLogAsync(new EventsEntity(
             true,
-            user.GetUserId() ?? Guid.Empty,
+            userClaims.GetUserId() ?? Guid.Empty,
             articleId,
             Events.Deleting));
         
         return TypedResults.NoContent();
     }
-
-    private static async Task<Results<Ok, ForbidHttpResult>> LikesHandler(ArticlesDbContext dbContext,
-            Guid articleId,
-            ClaimsPrincipal user)
+    
+    private static async Task<Results<Ok, UnauthorizedHttpResult, NotFound>> LikesHandler(ArticlesDbContext dbContext,
+        Guid articleId,
+        ClaimsPrincipal userClaims)
     {
-        var userId = user.GetUserId();
-        if (userId is not { } uid) return TypedResults.Forbid();
-        try
-        {
-            await dbContext.ArticlesLikes
-                .AsNoTracking()
-                .FirstAsync(e => e.PostId == articleId && e.OwnerId == uid);
-            
-            await dbContext.ArticlesLikes
-                .Where(l => l.PostId == articleId && l.OwnerId == uid)
-                .ExecuteDeleteAsync();
-            
-            return TypedResults.Ok();
-        }
-        catch (InvalidOperationException)
-        {
-            await dbContext.ArticlesLikes.AddAsync(new LikesEntity(uid, articleId));
-            await dbContext.SaveChangesAsync();
-            return TypedResults.Ok();
-        }
+        var userId = userClaims.GetUserId();
+        
+        if (userId is not { } uid) return TypedResults.Unauthorized();
+        
+        var article = await dbContext.Articles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == articleId);
+        if (article is null) return TypedResults.NotFound();
+        
+        var deleted = await dbContext.ArticlesLikes
+            .Where(l => l.PostId == articleId && l.OwnerId == uid)
+            .ExecuteDeleteAsync();
+
+        if (deleted > 0) return TypedResults.Ok();
+        
+        await dbContext.ArticlesLikes.AddAsync(new LikesEntity(uid, articleId));
+        await dbContext.SaveChangesAsync();
+        return TypedResults.Ok();
     }
 }
 

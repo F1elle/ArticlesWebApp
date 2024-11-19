@@ -6,5 +6,5 @@ public interface IJwtProvider
 {
     public string GetToken(UsersEntity user);
 
-    public string GetTempToken();
+    public string GenerateTempToken();
 }

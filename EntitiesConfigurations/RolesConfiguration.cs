@@ -3,7 +3,7 @@ using ArticlesWebApp.Api.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace ArticlesWebApp.Api.Configurations;
+namespace ArticlesWebApp.Api.EntitiesConfigurations;
 
 public class RolesConfiguration : IEntityTypeConfiguration<RolesEntity>
 {

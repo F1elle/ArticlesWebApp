@@ -2,7 +2,7 @@ using ArticlesWebApp.Api.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace ArticlesWebApp.Api.Configurations;
+namespace ArticlesWebApp.Api.EntitiesConfigurations;
 
 public class CommentsConfiguration : IEntityTypeConfiguration<CommentsEntity>
 {
@@ -10,8 +10,17 @@ public class CommentsConfiguration : IEntityTypeConfiguration<CommentsEntity>
     {
         builder.ToTable("Comments");
         builder.HasKey(c => c.Id);
-        builder.HasIndex(c => new {c.ArticleId, c.OwnerId}).IsUnique();
+        builder.Property(c => c.ArticleId).IsRequired();
+        builder.Property(c => c.OwnerId).IsRequired();
         builder.Property(c => c.Content).IsRequired().HasMaxLength(500);
         builder.Property(c => c.PublishedDate).IsRequired();
+        builder.HasMany(c => c.Likes)
+            .WithOne()
+            .HasForeignKey(l => l.PostId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(c => c.Comments)
+            .WithOne()
+            .HasForeignKey(c => c.CommentId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
